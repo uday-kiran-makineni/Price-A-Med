@@ -14,7 +14,8 @@ COPY ./docker-entrypoint.sh /docker-entrypoint.sh
 
 RUN mvn clean package -DskipTests
 
-RUN apk add inotify-tools
+RUN apk add inotify-tools dos2unix
+RUN dos2unix /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh
 
 ENTRYPOINT ["/docker-entrypoint.sh"]

@@ -1,4 +1,4 @@
-#!/bin/sh
+﻿#!/bin/sh
 
 while inotifywait -r -e modify /app/src/main/; 
 do 
