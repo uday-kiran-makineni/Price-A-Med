@@ -1,10 +1,10 @@
--- use evernorth; 
+use evernorth; 
 
--- create table member (
--- 	memberID varchar(12) PRIMARY KEY,
---     email varchar(255) UNIQUE NOT NULL,
---     active boolean default false
--- ); 
+create table member (
+	memberID varchar(12) PRIMARY KEY,
+    email varchar(255) UNIQUE NOT NULL,
+    active boolean default false
+); 
 
 -- create table user (
 -- 	userID INT AUTO_INCREMENT PRIMARY KEY,
