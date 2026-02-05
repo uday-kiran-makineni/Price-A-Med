@@ -1,13 +1,19 @@
 import React from "react";
 import { useState } from "react";
 import { AwesomeCaptcha } from "react-awesome-captcha";
+import axios from "axios";
 
 const UpdatePassword = () => {
-  const [newData, setNewData] = useState("");
+  const [newData, setNewData] = useState({});
   const [isFocused, setIsFocused] = useState(false);
   const [alertMessage, setAlertMessage] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
   const [isCaptchaValid, setIsCaptchaValid] = useState(false);
   const [section, setSection] = useState("section1");
+  const [taskID, setTaskID] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+
+  const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -18,7 +24,7 @@ const UpdatePassword = () => {
     setIsCaptchaValid(isValid);
   };
 
-  const ValidateAndSendOTP = () => {
+  const ValidateAndSendOTP = async () => {
     const memberID = newData["memberID"] || "";
     const regex = /^ENM\$[A-Za-z0-9]{8}$/;
 
@@ -27,32 +33,70 @@ const UpdatePassword = () => {
       return;
     }
 
-    // check if member ID exists in DB !!
-    // send an email to associated email //
+    setIsLoading(true);
+    setAlertMessage("");
 
-    setSection("section2");
-    return;
+    try {
+      const response = await axios.post(
+        BACKEND_URL + "/auth/forgot-password/send-otp",
+        { memberID: memberID }
+      );
+
+      if (response.data.success) {
+        setTaskID(response.data.taskID);
+        setSuccessMessage("OTP sent to " + response.data.email);
+        setSection("section2");
+      } else {
+        setAlertMessage(response.data.message || "Failed to send OTP");
+      }
+    } catch (error) {
+      console.log("Error:", error);
+      if (error.response && error.response.data) {
+        setAlertMessage(error.response.data.message || "Failed to send OTP");
+      } else {
+        setAlertMessage("Failed to send OTP. Please try again.");
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const ValidateAndSubmitOTP = () => {
+  const ValidateAndSubmitOTP = async () => {
     const otp = newData["otp"] || "";
-    const regex = /^\d{6}$/;
 
-    if (!regex.test(otp)) {
-      setAlertMessage("Invalid otp");
+    if (otp.length < 6) {
+      setAlertMessage("Invalid OTP. Must be at least 6 characters.");
       return;
     }
 
-    // check if otp is correct
+    setIsLoading(true);
+    setAlertMessage("");
 
-    setSection("section3");
-    return;
+    try {
+      const response = await axios.post(
+        BACKEND_URL + "/auth/forgot-password/verify-otp",
+        { taskID: taskID, otp: otp }
+      );
+
+      if (response.data.success) {
+        setSuccessMessage("");
+        setSection("section3");
+      } else {
+        setAlertMessage(response.data.message || "Invalid OTP");
+      }
+    } catch (error) {
+      console.log("Error:", error);
+      if (error.response && error.response.data) {
+        setAlertMessage(error.response.data.message || "Invalid OTP");
+      } else {
+        setAlertMessage("Failed to verify OTP. Please try again.");
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const ValidateAndChangePassword = () => {
-    // validate password
-    // change password
-
+  const ValidateAndChangePassword = async () => {
     const password = newData["password"] || "";
     const cpassword = newData["cpassword"] || "";
 
@@ -65,7 +109,7 @@ const UpdatePassword = () => {
       /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]{8,}$/;
 
     if (!regex.test(password)) {
-      setAlertMessage("Choose a strong password");
+      setAlertMessage("Choose a strong password (min 8 chars, uppercase, lowercase, number, special char)");
       return;
     }
 
@@ -76,16 +120,37 @@ const UpdatePassword = () => {
 
     if (!isCaptchaValid) {
       setAlertMessage("Invalid Captcha");
-
       return;
     }
 
-    // update password
+    setIsLoading(true);
+    setAlertMessage("");
 
-    setSection("section4");
+    try {
+      const response = await axios.post(
+        BACKEND_URL + "/auth/forgot-password/reset-password",
+        { 
+          memberID: newData["memberID"],
+          taskID: taskID, 
+          password: password 
+        }
+      );
 
-    console.log(newData);
-    return;
+      if (response.data.success) {
+        setSection("section4");
+      } else {
+        setAlertMessage(response.data.message || "Failed to reset password");
+      }
+    } catch (error) {
+      console.log("Error:", error);
+      if (error.response && error.response.data) {
+        setAlertMessage(error.response.data.message || "Failed to reset password");
+      } else {
+        setAlertMessage("Failed to reset password. Please try again.");
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -120,10 +185,11 @@ const UpdatePassword = () => {
           )}
 
           <button
-            className="w-full h-[50px] bg-green-500 text-white rounded-md hover:bg-slate-600 font-semibold mt-5"
+            className="w-full h-[50px] bg-green-500 text-white rounded-md hover:bg-slate-600 font-semibold mt-5 disabled:bg-gray-400"
             onClick={ValidateAndSendOTP}
+            disabled={isLoading}
           >
-            Send OTP
+            {isLoading ? "Sending..." : "Send OTP"}
           </button>
         </div>
       )}
@@ -131,6 +197,11 @@ const UpdatePassword = () => {
       {section === "section2" && (
         <div>
           <div className="text-3xl mb-8">OTP sent to associated email</div>
+          {successMessage && (
+            <p className="text-sm text-center text-green-600 mb-4">
+              {successMessage}
+            </p>
+          )}
           <div className="font-bold h-6 mt-3 text-gray-5 00 text-md leading-8 uppercase">
             {""}
             OTP
@@ -158,10 +229,11 @@ const UpdatePassword = () => {
           )}
 
           <button
-            className="w-full h-[50px] bg-green-500 text-white rounded-md hover:bg-slate-600 font-semibold mt-5"
+            className="w-full h-[50px] bg-green-500 text-white rounded-md hover:bg-slate-600 font-semibold mt-5 disabled:bg-gray-400"
             onClick={ValidateAndSubmitOTP}
+            disabled={isLoading}
           >
-            Submit
+            {isLoading ? "Verifying..." : "Submit"}
           </button>
         </div>
       )}
@@ -229,10 +301,11 @@ const UpdatePassword = () => {
           )}
 
           <button
-            className="w-full h-[50px] bg-green-500 text-white rounded-md hover:bg-slate-600 font-semibold mt-5"
+            className="w-full h-[50px] bg-green-500 text-white rounded-md hover:bg-slate-600 font-semibold mt-5 disabled:bg-gray-400"
             onClick={ValidateAndChangePassword}
+            disabled={isLoading}
           >
-            Reset Password
+            {isLoading ? "Resetting..." : "Reset Password"}
           </button>
         </div>
       )}

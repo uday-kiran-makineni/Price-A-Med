@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { User, Users, Pill, Calendar, CreditCard, Package, X, Send } from 'lucide-react';
-import './ChatBot.css';
+import './chatBot.css';
 
 const predictiveQueries = [
   {

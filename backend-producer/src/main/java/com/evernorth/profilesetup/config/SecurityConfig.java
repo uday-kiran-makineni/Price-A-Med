@@ -42,7 +42,7 @@ public class SecurityConfig {
             .cors(withDefaults())
             .csrf(csrf -> csrf.disable()) // Disable CSRF for stateless APIs
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/public/**", "/auth/signup", "/auth/login", "/auth/logout" ).permitAll()
+                .requestMatchers("/public/**", "/auth/signup", "/auth/login", "/auth/logout", "/auth/forgot-password/**").permitAll()
                 .requestMatchers("/auth/user/**", "/api/**").hasAuthority("ROLE_USER")
                 .requestMatchers("/auth/agent/**").hasAuthority("ROLE_AGENT")
                 .requestMatchers("/auth/admin/**").hasAuthority("ROLE_ADMIN")
