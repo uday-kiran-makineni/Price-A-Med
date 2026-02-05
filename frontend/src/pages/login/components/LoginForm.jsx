@@ -56,9 +56,14 @@ export default function LoginForm() {
 
       return;
     } catch (error) {
-      const { message } = error.response.data;
-      console.log(message);
-      setAlertMessage(message);
+      console.log("Login error:", error);
+      if (error.response && error.response.data) {
+        const { message } = error.response.data;
+        console.log(message);
+        setAlertMessage(message || "Login failed");
+      } else {
+        setAlertMessage("Login failed. Please try again.");
+      }
       return;
     }
 
