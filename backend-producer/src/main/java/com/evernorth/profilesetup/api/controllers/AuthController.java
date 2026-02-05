@@ -4,11 +4,9 @@ package com.evernorth.profilesetup.api.controllers;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -21,6 +19,10 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.HashMap;
+import java.util.Map;
+
+import org.springframework.http.HttpStatus;
 
 @RestController
 @RequestMapping("/auth")
@@ -36,28 +38,39 @@ public class AuthController {
     private JwtService jwtService;
 
     @PostMapping("/login")
-    @Async
-    public String login(@RequestBody LoginDTO payload, HttpServletResponse response) {
+    public ResponseEntity<?> login(@RequestBody LoginDTO payload, HttpServletResponse response) {
         System.out.println(payload.getUsername() + " " + payload.getPassword());
         
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(payload.getUsername(), payload.getPassword()));
+        try {
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(payload.getUsername(), payload.getPassword()));
 
-        System.out.println("Yoyoyoyoy");
-        if (authentication.isAuthenticated()) {
-            System.out.println("Authenticated");
-            // return jwtService.generateToken(payload.getUsername());
-            String jwtToken = jwtService.generateToken(payload.getUsername());
-            Cookie cookie = new Cookie("jwt", jwtToken);
-            cookie.setHttpOnly(true);
-            cookie.setSecure(true);
-            cookie.setPath("/");
-            cookie.setMaxAge(1 * 24 * 60 * 60);
-            response.addCookie(cookie);
-            return "Login Sucessful";
-        } else {
-            System.out.println("Unauthenticated");
-            throw new UsernameNotFoundException("Invalid user request!");
+            System.out.println("Authentication result: " + authentication.isAuthenticated());
+            if (authentication.isAuthenticated()) {
+                System.out.println("Authenticated");
+                String jwtToken = jwtService.generateToken(payload.getUsername());
+                Cookie cookie = new Cookie("jwt", jwtToken);
+                cookie.setHttpOnly(true);
+                cookie.setSecure(false); // Set to false for localhost (non-HTTPS)
+                cookie.setPath("/");
+                cookie.setMaxAge(1 * 24 * 60 * 60);
+                response.addCookie(cookie);
+                
+                Map<String, Object> responseBody = new HashMap<>();
+                responseBody.put("message", "Login Successful");
+                responseBody.put("token", jwtToken);
+                return ResponseEntity.ok(responseBody);
+            } else {
+                System.out.println("Unauthenticated");
+                Map<String, Object> errorResponse = new HashMap<>();
+                errorResponse.put("message", "Invalid user request!");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
+            }
+        } catch (Exception e) {
+            System.out.println("Authentication error: " + e.getMessage());
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("message", "Invalid credentials");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
         }
     }
 
